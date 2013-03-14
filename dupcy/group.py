@@ -16,16 +16,31 @@
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
 
 from urllib.parse import urlparse
+import os
+
+class Groups(list):
+	def add(self, name):
+		for group in self:
+			if group.name is name:
+				return
+		self.append(Group(name))
+		
+	def remove(self, name):
+		for group in self:
+			if group.name is name: self.remove(Group(name))
 
 class Group(object):
-	def __init__(self, name, items):
+	def __init__(self, name, items=[], pre='', post=''):
 		self.name = name
 		self.items = items
-		pass
+		self.pre = pre
+		self.post = post
 	
-	def add(self, url):
+	def add(self, url, addAnyways=False):
 		if url not in self.items:
-			self.items.append(urlparse(url))
+			url = urlparse(url)
+			if os.path.exists(url.path) or addAnyways:
+				self.items.append(url)
 	
 	def remove(self, url):
 		self.items.remove(url)
