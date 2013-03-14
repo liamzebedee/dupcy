@@ -16,7 +16,7 @@
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
 
 from time import time
-	
+
 class Links(list):
 	def getLinkForTargetGroup(self, targetGroup):
 		for link in self:
@@ -24,7 +24,6 @@ class Links(list):
 				return link
 		return None
 
-		
 class Link(object):
 	def __init__(self, sourceGroups, targetGroup, pre='', post=''):
 		self.sourceGroups = sourceGroups
@@ -36,3 +35,6 @@ class Link(object):
 	def doneSomething(self):
 		"""Updates the lastModified attribute (should be called after something is done)"""
 		self.lastModified = time()
+		
+	def backup(self): pass
+	def restore(self, path): pass
