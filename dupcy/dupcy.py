@@ -14,3 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
+
+# XXX load configuration into these globals
+links = Links()
+groups = Groups()
