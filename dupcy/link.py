@@ -14,3 +14,25 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
+
+from time import time
+	
+class Links(list):
+	def getLinkForTargetGroup(self, targetGroup):
+		for link in self:
+			if link.targetGroup is targetGroup:
+				return link
+		return None
+
+		
+class Link(object):
+	def __init__(self, sourceGroups, targetGroup, pre='', post=''):
+		self.sourceGroups = sourceGroups
+		self.targetGroup = targetGroup
+		self.lastModified = time()
+		self.pre = pre
+		self.post = post
+	
+	def doneSomething(self):
+		"""Updates the lastModified attribute (should be called after something is done)"""
+		self.lastModified = time()
