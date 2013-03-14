@@ -18,14 +18,14 @@
 from urllib.parse import urlparse
 
 class Group(object):
-	def __init__(self, name):
+	def __init__(self, name, items):
 		self.name = name
-		self.sources = []
+		self.items = items
 		pass
 	
 	def add(self, url):
-		if url not in self.sources:
-			self.sources.append(urlparse(url))
+		if url not in self.items:
+			self.items.append(urlparse(url))
 	
 	def remove(self, url):
-		self.sources.remove(url)
+		self.items.remove(url)
