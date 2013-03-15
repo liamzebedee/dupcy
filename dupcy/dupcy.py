@@ -15,6 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
 
-# XXX load configuration into these globals
-links = Links()
-groups = Groups()
+import sys
+import argparse
+
+def main():
+	import link
+	import group
+
+	# XXX load configuration into these globals
+	links = Links()
+	groups = Groups()
+
+	pass
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser()
+	parser.parse_args()
+    main()
