@@ -28,6 +28,12 @@ class Groups(list):
 	def remove(self, name):
 		for group in self:
 			if group.name is name: self.remove(Group(name))
+			
+	def items(self):
+		items = []
+		for sourceGroup in self.sourceGroups:
+			items += sourceGroup.items
+		return items
 
 class Group(object):
 	def __init__(self, name, items=[], pre='', post=''):
@@ -39,7 +45,9 @@ class Group(object):
 	def add(self, url, addAnyways=False):
 		if url not in self.items:
 			url = urlparse(url)
-			if os.path.exists(url.path) or addAnyways:
+			# XXX only check for local files - those with file:// protocol
+			exists = os.path.exists(url.path)
+			if exists or addAnyways:
 				self.items.append(url)
 	
 	def remove(self, url):
