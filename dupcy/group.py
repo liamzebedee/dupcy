@@ -36,11 +36,10 @@ class Groups(list):
 		return items
 
 class Group(object):
-	def __init__(self, name, items=[], pre='', post=''):
+	def __init__(self, name, items=[], preBackupJob=''):
 		self.name = name
 		self.items = items
-		self.pre = pre
-		self.post = post
+		self.preBackupJob = preBackupJob
 	
 	def add(self, url, addAnyways=False):
 		if url not in self.items:

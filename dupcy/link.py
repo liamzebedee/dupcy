@@ -29,12 +29,10 @@ class Links(list):
 		return None
 
 class Link(object):
-	def __init__(self, sourceGroups, targetGroup, pre='', post=''):
+	def __init__(self, sourceGroups, targetGroup):
 		self.sourceGroups = sourceGroups
 		self.targetGroup = targetGroup
 		self.lastModified = time()
-		self.pre = pre
-		self.post = post
 	
 	def doneSomething(self):
 		"""Updates the lastModified attribute (should be called after something is done)"""
