@@ -35,15 +35,29 @@ class Link(object):
 	def doneSomething(self):
 		"""Updates the lastModified attribute (should be called after something is done)"""
 		self.lastModified = time()
-		
+	
+	def duplicity(self, cmds):
+		call(["duplicity", "--name='{0}'".format(self.targetGroup.name)] + cmds)
+	
+	def getTarget(self): return self.targetGroup.items[0].geturl()
+	
 	def backup(self):
 		# Ugly. XXX interact with API directly
 		self._includes = ['--include "{0}"'.format(source.path) for source in self.sourceGroups.items()]
-		call([	"duplicity", 
-			 	"--name='{0}'".format(self.targetGroup.name)] +
-			 	self._includes +
-			 	["--exclude /",
-			 	"/", self.target.items[0].geturl()])
+		self.duplicity(self._includes + ["--exclude /", "/", self.getTarget()])
 		self.doneSomething()
 	
-	def restore(self, path): pass
+	def restore(self, path='/', _file='/', time=''):
+		"""
+		Restores to path (by default '/') from this link's target, optionally a 
+		specific file from a specific time.
+		@param path absolute path
+		@param _file relative path to file or directory
+		"""
+		options = []
+		if _file is not '/':
+			options.append('--file-to-restore "{0}"'.format(_file))
+		if time is not '':
+			options.append('--time "{0}'.format(time))
+		self.duplicity(['restore'] + options + [self.getTarget(), path])
+		self.doneSomething()
