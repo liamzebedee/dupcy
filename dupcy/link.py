@@ -36,5 +36,14 @@ class Link(object):
 		"""Updates the lastModified attribute (should be called after something is done)"""
 		self.lastModified = time()
 		
-	def backup(self): pass
+	def backup(self):
+		# Ugly. XXX interact with API directly
+		self._includes = ['--include "{0}"'.format(source.path) for source in self.sourceGroups.items()]
+		call([	"duplicity", 
+			 	"--name='{0}'".format(self.targetGroup.name)] +
+			 	self._includes +
+			 	["--exclude /",
+			 	"/", self.target.items[0].geturl()])
+		self.doneSomething()
+	
 	def restore(self, path): pass
