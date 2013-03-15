@@ -1,6 +1,6 @@
 **Software is incomplete for usage**.
 
-Dupcee is a frontend and wrapper to the *duplicity* backup program, making advanced backups **simpler** and more **user-friendly**. It is a **free** program licensed under the GPLv3. 
+Dupcee is a frontend and wrapper to the *duplicity* backup program, making advanced backups **simpler** and more **user-friendly**. It is a **free** program licensed under the GPLv3.
 
 # Dupcee
 Dupcee starts with two concepts: the **source** and the **target**. **Sources** are places on your computer where files are stored, **targets** are places where you want to backup these files to. 
@@ -12,14 +12,22 @@ Groups are a powerful abstraction when used correctly. For example, when I creat
 **Links** are very flexible, as they can be configured to backup only when certain conditions are met, and can also exectute pre/post backup jobs.
 
 ## Commands
-> dupcy [+ | -]group GROUPNAME [--pre CMD] [--post CMD]
-> dupcy group GROUPNAME [+/-]URL [--force]
-> dupcy [+ | -]link SOURCEGROUP TARGETGROUP [--time=""] [--onchange]
-> dupcy backup --all
-> dupcy restore --all
-> dupcy backup SOURCEGROUP [--to TARGETGROUP] [--full]
-> dupcy restore TARGETGROUP [--date DATE]
-> dupcy config [--load URL | --export URL]
+* Add a group with name, optionally pre job
+* Remove a group by its name
+
+* Add a URL to a group by its name, optionally forced
+* Remove a URL from a group
+
+* Add a link between a source group and a target group, optionally doing by time or by when it changes
+* Remove a link between a source group and a target group
+
+* Backup a source, optionally fully, to a specific target
+* Backup a target, optionally a full backup
+* Backup everything
+* Restore a source, optionally according to a time, from a specific target
+
+* Load config from URL
+* Export config to URL
 
 ## Comparison
 To duplicity:
