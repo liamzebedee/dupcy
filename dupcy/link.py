@@ -18,6 +18,10 @@
 from time import time
 
 class Links(list):
+	def backupSource(self, sourceGroupName):
+		# TODO
+		pass
+	
 	def getLinkForTargetGroup(self, targetGroup):
 		for link in self:
 			if link.targetGroup is targetGroup:
@@ -43,8 +47,8 @@ class Link(object):
 	
 	def backup(self):
 		# Ugly. XXX interact with API directly
-		self._includes = ['--include "{0}"'.format(source.path) for source in self.sourceGroups.items()]
-		self.duplicity(self._includes + ["--exclude /", "/", self.getTarget()])
+		includes = ['--include "{0}"'.format(source.path) for source in self.sourceGroups.items()]
+		self.duplicity(includes + ["--exclude /", "/", self.getTarget()])
 		self.doneSomething()
 	
 	def restore(self, path='/', _file='/', time=''):
