@@ -9,25 +9,7 @@ Sources and targets are grouped into source and target **groups**. We **link** s
 
 Groups are a powerful abstraction when used correctly. For example, when I created this program I had 2 things I needed to backup - schoolwork and media. I had multiple places where school-related data was stored, as well as for media. I also had 2 different backup targets, a USB and a HDD. My media folder was huge, so it wouldn't fit on the USB, but my schoolwork would. **I needed a way to backup multiple sources to different targets, but only backup some sources depending on the target**. What I did was created a source group *school* and a source group called *media*, and likewise two target groups *hdd* and *usb*. I created a backup link between *school*/*media* and *hdd*, and another between *school* and *usb*.
 
-**Links** are very flexible, as they can be configured to backup only when certain conditions are met, and can also exectute pre/post backup jobs.
-
-## Commands
-* Add a group with name, optionally pre job
-* Remove a group by its name
-
-* Add a URL to a group by its name, optionally forced
-* Remove a URL from a group
-
-* Add a link between a source group and a target group, optionally doing by time or by when it changes
-* Remove a link between a source group and a target group
-
-* Backup a source, optionally fully, to a specific target
-* Backup a target, optionally a full backup
-* Backup everything
-* Restore a source, optionally according to a time, from a specific target
-
-* Load config from URL
-* Export config to URL
+**Links** are very flexible, as they can be configured to backup at the same time every day. Groups can also utilise a pre-backup hook, which helps for when you need to export data (such as live databases). 
 
 ## Comparison
 To duplicity:
