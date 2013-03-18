@@ -20,8 +20,17 @@ import group
 
 import sys
 import argparse
+from multiprocessing.connection import Listener, Client
+import socket
+import yapdi
+import thread
+from gi.repository import GLib
+import os
+import shelve
 
-def startDaemon(args): pass
+config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'))
+address = ('localhost', 19374)
+
 def addGroup(args): pass
 def remGroup(args): pass
 def addLink(args): pass
@@ -33,13 +42,9 @@ def restore(args): pass
 def importConfig(args): pass
 def exportConfig(args): pass
 
-if __name__ == "__main__":
+def processCommand(cmd):
 	parser = argparse.ArgumentParser()
 	subparser = parser.add_subparsers()
-	
-	# dupcee start
-	pStart = subparser.add_parser('start')
-	pStart.set_defaults(func=startDaemon)
 	
 	# dupcee group
 	pGroup = subparser.add_parser('group')
@@ -92,7 +97,7 @@ if __name__ == "__main__":
 	
 	pRestore.add_argument('source', type=str)
 	pRestore.add_argument('--time', type=str)
-	pRestore.add_argument('--from', type=str)
+	pRestor.add_argument('--from', type=str)
 	pRestore.set_defaults(func=restore)
 	
 	# dupcee config
@@ -108,5 +113,32 @@ if __name__ == "__main__":
 	pConfig_export.set_defaults(func=exportConfig)
 	
 	# setup
-	args = parser.parse_args()
-	args.func(args) # XXX send to daemon
+	args = parser.parse_args(cmd)
+	args.func(args)
+
+def client(args):
+	# Send command to daemon
+	# Read output
+	# Assume finish after socket close
+
+def initDefaultConfigState():
+	config.groups = Groups() if config.groups is None
+	config.links = Links() if config.links is None
+	config.jobs = Jobs() if config.jobs is None			
+
+if __name__ == "__main__":
+	main()
+	
+def main():
+	try:
+		ln = Listener(address)
+	except socket.error:
+		# Daemon already running
+		client(sys.argv)
+		return
+	
+	daemon = yapdi.Daemon()
+	daemon.daemonize()
+	
+	initDefaultConfigState()
+	
