@@ -10,5 +10,10 @@ setup(name='Dupcy',
 	url='https://github.com/liamzebedee/dupcy',
 	packages=['dupcy'],
 	license='GPLv3',
+	entry_points = {
+		'console_scripts': [
+			'dupcy = dupcy.dupcy:main',
+		]
+	},
 )
 
