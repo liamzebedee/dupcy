@@ -29,7 +29,6 @@ import os
 import shelve
 
 config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'))
-address = ('localhost', 19374)
 
 def addGroup(args): pass
 def remGroup(args): pass
@@ -124,14 +123,17 @@ def client(args):
 def initDefaultConfigState():
 	config.groups = Groups() if config.groups is None
 	config.links = Links() if config.links is None
-	config.jobs = Jobs() if config.jobs is None			
+	config.jobs = Jobs() if config.jobs is None
+	config.address = ('localhost', 19374) if config.address is None
 
 if __name__ == "__main__":
 	main()
 	
 def main():
+	initDefaultConfigState()
+	
 	try:
-		ln = Listener(address)
+		ln = Listener(config.address)
 	except socket.error:
 		# Daemon already running
 		client(sys.argv)
@@ -139,6 +141,3 @@ def main():
 	
 	daemon = yapdi.Daemon()
 	daemon.daemonize()
-	
-	initDefaultConfigState()
-	
