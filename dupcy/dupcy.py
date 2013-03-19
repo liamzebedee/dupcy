@@ -127,10 +127,10 @@ def client(args):
 
 def initDefaultConfigState():
 	defaults = (
-		('groups', Groups()), 
-		('links', Links()), 
-		('jobs', Jobs()), 
-		('address', ('localhost', 19380)) 
+		('groups', Groups()),
+		('links', Links()),
+		('jobs', Jobs()),
+		('address', ('localhost', 19340))
 	)
 	for k, v in defaults:
 		if k not in config or config[k] is None:
@@ -140,7 +140,7 @@ def main():
 	STOPSIGNALS = (signal.SIGINT, signal.SIGTERM)	
 	
 	initDefaultConfigState()
-	config['address'] = ('localhost', 19340)
+	
 	try:
 		ln = Listener(config['address'])
 	except socket.error, e:
