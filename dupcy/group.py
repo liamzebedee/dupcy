@@ -18,21 +18,11 @@
 from urlparse import urlparse
 import os
 
-class Groups(list):
-	def add(self, name):
-		for group in self:
-			if group.name is name:
-				return
-		self.append(Group(name))
-		
-	def remove(self, name):
-		for group in self:
-			if group.name is name: self.remove(Group(name))
-			
+class Groups(dict):
 	def items(self):
 		items = []
 		for sourceGroup in self.sourceGroups:
-			items += sourceGroup.items
+			items.extend(sourceGroup.items)
 		return items
 
 class Group(object):
@@ -44,9 +34,11 @@ class Group(object):
 	def add(self, url, addAnyways=False):
 		if url not in self.items:
 			url = urlparse(url)
-			# XXX only check for local files - those with file:// protocol
-			exists = os.path.exists(url.path)
-			if exists or addAnyways:
+			valid = True
+			if url.scheme == 'file':
+				valid = os.path.exists(url.path)
+			if valid or addAnyways:
+				print("Adding item {0} to group {1}".format(url, self.name))
 				self.items.append(url)
 	
 	def remove(self, url):
