@@ -15,11 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
-def make_sure_dir_exists(path):
-	try:
-		os.makedirs(path)
-	except OSError as exception:
-		if exception.errno != errno.EEXIST:
-			raise
+class Jobs(list):
+	pass
+class Job(object):
+	def __init__(self, cmd, file_):
+		self.cmd = cmd
+		self.file_ = file_
