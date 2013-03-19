@@ -35,8 +35,12 @@ config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'), writebac
 
 def addGroup(args): pass
 def remGroup(args): pass
+def listGroups(args): pass
+
 def addLink(args): pass
 def remLink(args): pass
+def listLinks(args): pass
+
 def backupSource(args): pass
 def backupTarget(args): pass
 def backupAll(args): pass
@@ -64,6 +68,9 @@ def processJob(job):
 	pGroupX_rem.add_argument('name', type=str)
 	pGroupX_rem.set_defaults(func=remGroup)
 	
+	pGroupX_list = pGroupX.add_parser('list')
+	pGroupX_list.set_defaults(func=listGroups)
+	
 	# dupcee link
 	pLink = subparser.add_parser('link')
 	pLinkX = pLink.add_subparsers()
@@ -78,6 +85,9 @@ def processJob(job):
 	pLinkX_rem.add_argument('sourceGroup', type=str)
 	pLinkX_rem.add_argument('targetGroup', type=str)
 	pLinkX_rem.set_defaults(func=remLink)
+	
+	pLinkX_list = pLinkX.add_parser('list')
+	pLinkX_list.set_defaults(func=listLinks)
 	
 	# dupcee backup
 	pBackup = subparser.add_parser('backup')
@@ -171,7 +181,6 @@ def main():
 		config['jobs'].remove(job.cmd)
 		config.sync()
 		conn.close()
-		
 	clientListener = pyev.Io(ln._listener._socket, pyev.EV_READ, eventLoop, handle_new_client)
 	watchers.append(clientListener)
 	
