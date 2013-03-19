@@ -31,7 +31,7 @@ import shelve
 import pyev
 import signal
 
-config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'))
+config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'), writeback=True)
 
 def addGroup(args): pass
 def remGroup(args): pass
@@ -165,10 +165,10 @@ def main():
 	def handle_new_client(watcher, revents):
 		conn = ln.accept()
 		job = Job(conn.recv(), conn)
-		config['jobs'].append(job)
+		config['jobs'].append(job.cmd)
 		config.sync()
 		processJob(job)
-		config['jobs'].remove(job)
+		config['jobs'].remove(job.cmd)
 		config.sync()
 		conn.close()
 		
