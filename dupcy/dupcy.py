@@ -15,8 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
 
-import link
-import group
+from link import *
+from group import *
+from job import *
 
 import sys
 import argparse
@@ -27,6 +28,8 @@ import thread
 from gi.repository import GLib
 import os
 import shelve
+import pyev
+import signal
 
 config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'))
 
@@ -116,28 +119,58 @@ def processCommand(cmd):
 	args.func(args)
 
 def client(args):
+	conn = Client(config['address'])
 	# Send command to daemon
 	# Read output
 	# Assume finish after socket close
+	pass
 
 def initDefaultConfigState():
-	config.groups = Groups() if config.groups is None
-	config.links = Links() if config.links is None
-	config.jobs = Jobs() if config.jobs is None
-	config.address = ('localhost', 19374) if config.address is None
+	defaults = (
+		('groups', Groups()), 
+		('links', Links()), 
+		('jobs', Jobs()), 
+		('address', ('localhost', 19380)) 
+	)
+	for k, v in defaults:
+		if k not in config or config[k] is None:
+			config[k] = v
 
-if __name__ == "__main__":
-	main()
-	
 def main():
-	initDefaultConfigState()
+	STOPSIGNALS = (signal.SIGINT, signal.SIGTERM)	
 	
+	initDefaultConfigState()
+	config['address'] = ('localhost', 19340)
 	try:
-		ln = Listener(config.address)
-	except socket.error:
+		ln = Listener(config['address'])
+	except socket.error, e:
+		print(e)
+		# TODO check for specific error
 		# Daemon already running
 		client(sys.argv)
 		return
 	
-	daemon = yapdi.Daemon()
-	daemon.daemonize()
+	#daemon = yapdi.Daemon()
+	#daemon.daemonize()
+	
+	# XXX consider increasing timeout interval to improve performance, events are rarely added 
+	eventLoop = pyev.default_loop()
+	watchers = []
+	
+	def handle_new_client(watcher, revents):
+		conn = ln.accept()
+		pass
+	clientListener = pyev.Io(ln._listener._socket, pyev.EV_READ, eventLoop, handle_new_client)
+	watchers.append(clientListener)
+	
+	def shutdown(watcher, revents):
+		ln.close()
+		config.close()
+		eventLoop.stop(pyev.EVBREAK_ALL)
+	watchers.extend([pyev.Signal(sig, eventLoop, shutdown) for sig in STOPSIGNALS])
+	
+	for watcher in watchers: watcher.start()
+	eventLoop.start()
+
+if __name__ == "__main__":
+	main()
