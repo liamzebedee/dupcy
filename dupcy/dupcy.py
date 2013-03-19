@@ -31,11 +31,32 @@ import shelve
 import pyev
 import signal
 
-config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'), writeback=True)
+address = ('localhost', 19340)
 
-def addGroup(args): pass
+def addGroup(args):
+	args.log('Processing group')
+	group = config['groups'].get(args.name, Group(args.name))
+	
+	if args.force and args.preBackupJob is not None:
+		args.log('Set new pre backup job')
+		group.preBackupJob = args.preBackupJob
+	if args.items is not None:
+		args.log('Adding new items to group') 
+		for item in args.items:
+			group.add(item, addAnyways=args.force)
+	args.log('Saving configuration')
+	
+	config['groups'][group.name] = group
+	config.sync()
+
 def remGroup(args): pass
-def listGroups(args): pass
+def listGroups(args):
+	groups = config['groups']
+	for name, group in groups.iteritems():
+		args.log("= {0} =".format(name))
+		for item in group.items:
+			args.log(item.geturl())
+		args.log("")
 
 def addLink(args): pass
 def remLink(args): pass
@@ -62,10 +83,12 @@ def processJob(job):
 	pGroupX_add.add_argument('name', type=str)
 	pGroupX_add.add_argument('--pre-backup-job', type=str)
 	pGroupX_add.add_argument('--force', action="store_true")
+	pGroupX_add.add_argument('--items', nargs='*')
 	pGroupX_add.set_defaults(func=addGroup)
 	
 	pGroupX_rem = pGroupX.add_parser('remove')
 	pGroupX_rem.add_argument('name', type=str)
+	pGroupX_rem.add_argument('--items', nargs='*')
 	pGroupX_rem.set_defaults(func=remGroup)
 	
 	pGroupX_list = pGroupX.add_parser('list')
@@ -133,7 +156,7 @@ def processJob(job):
 
 def client(cmd):
 	"""Sends a command cmd to the daemon, and outputs the response"""
-	conn = Client(config['address'])
+	conn = Client(address)
 	conn.send(cmd)
 	while True:
 		try:
@@ -142,23 +165,21 @@ def client(cmd):
 			return
 
 def initDefaultConfigState():
-	defaults = (
-		('groups', Groups()),
-		('links', Links()),
-		('jobs', Jobs()),
-		('address', ('localhost', 19340))
-	)
-	for k, v in defaults:
+	defaults = {
+		'groups': Groups(),
+		'links': Links(),
+		'jobs': Jobs(),
+	}
+	for k, v in defaults.iteritems():
 		if k not in config or config[k] is None:
+			print("Initialising config '{0}'".format(k))
 			config[k] = v
 
 def main():
 	STOPSIGNALS = (signal.SIGINT, signal.SIGTERM)	
 	
-	initDefaultConfigState()
-	
 	try:
-		ln = Listener(config['address'])
+		ln = Listener(address)
 	except socket.error, e:
 		# TODO check for specific error
 		# Daemon already running
@@ -168,6 +189,10 @@ def main():
 	daemon = yapdi.Daemon()
 	daemon.daemonize()
 	
+	global config
+	config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'), writeback=True)
+	initDefaultConfigState()
+	
 	# XXX consider increasing timeout interval to improve performance, events are rarely added 
 	eventLoop = pyev.default_loop()
 	watchers = []
@@ -175,9 +200,16 @@ def main():
 	def handle_new_client(watcher, revents):
 		conn = ln.accept()
 		job = Job(conn.recv(), conn)
+		if job.cmd is None or len(job.cmd) == 0:
+			job.printToConn("Error: command is malformed")
+			conn.close()
+			return
 		config['jobs'].append(job.cmd)
 		config.sync()
-		processJob(job)
+		try:
+			processJob(job)
+		except Exception as e:
+			job.printToConn("Error: {0}".format(e))
 		config['jobs'].remove(job.cmd)
 		config.sync()
 		conn.close()
