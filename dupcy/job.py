@@ -15,9 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
+
 class Jobs(list):
 	pass
+
 class Job(object):
-	def __init__(self, cmd, file_):
+	def __init__(self, cmd, conn):
 		self.cmd = cmd
-		self.file_ = file_
+		self.conn = conn
+	
+	def printToConn(self, s):
+		self.conn.send(s)

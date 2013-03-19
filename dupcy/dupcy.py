@@ -44,8 +44,10 @@ def restore(args): pass
 def importConfig(args): pass
 def exportConfig(args): pass
 
-def processCommand(cmd):
+def processJob(job):
+	cmd = job.cmd
 	parser = argparse.ArgumentParser()
+	parser.set_defaults(log=job.printToConn)
 	subparser = parser.add_subparsers()
 	
 	# dupcee group
@@ -99,7 +101,7 @@ def processCommand(cmd):
 	
 	pRestore.add_argument('source', type=str)
 	pRestore.add_argument('--time', type=str)
-	pRestor.add_argument('--from', type=str)
+	pRestore.add_argument('--from', type=str)
 	pRestore.set_defaults(func=restore)
 	
 	# dupcee config
@@ -117,13 +119,17 @@ def processCommand(cmd):
 	# setup
 	args = parser.parse_args(cmd)
 	args.func(args)
+	job.printToConn("Finished.")
 
-def client(args):
+def client(cmd):
+	"""Sends a command cmd to the daemon, and outputs the response"""
 	conn = Client(config['address'])
-	# Send command to daemon
-	# Read output
-	# Assume finish after socket close
-	pass
+	conn.send(cmd)
+	while True:
+		try:
+			print(conn.recv())
+		except EOFError:
+			return
 
 def initDefaultConfigState():
 	defaults = (
@@ -144,14 +150,13 @@ def main():
 	try:
 		ln = Listener(config['address'])
 	except socket.error, e:
-		print(e)
 		# TODO check for specific error
 		# Daemon already running
-		client(sys.argv)
+		client(sys.argv[1:])
 		return
 	
-	#daemon = yapdi.Daemon()
-	#daemon.daemonize()
+	daemon = yapdi.Daemon()
+	daemon.daemonize()
 	
 	# XXX consider increasing timeout interval to improve performance, events are rarely added 
 	eventLoop = pyev.default_loop()
@@ -159,7 +164,14 @@ def main():
 	
 	def handle_new_client(watcher, revents):
 		conn = ln.accept()
-		pass
+		job = Job(conn.recv(), conn)
+		config['jobs'].append(job)
+		config.sync()
+		processJob(job)
+		config['jobs'].remove(job)
+		config.sync()
+		conn.close()
+		
 	clientListener = pyev.Io(ln._listener._socket, pyev.EV_READ, eventLoop, handle_new_client)
 	watchers.append(clientListener)
 	
