@@ -49,7 +49,17 @@ def addGroup(args):
 	config['groups'][group.name] = group
 	config.sync()
 
-def remGroup(args): pass
+def remGroup(args):
+	if args.items is None:
+		args.log('Deleting group')
+		del config['groups'][args.name]
+	else:
+		group = config['groups'][args.name]
+		args.log('Deleting items')
+		for item in args.items:
+			group.remove(item)
+	config.sync()
+
 def listGroups(args):
 	groups = config['groups']
 	for name, group in groups.iteritems():
