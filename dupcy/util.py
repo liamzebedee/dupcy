@@ -16,6 +16,8 @@
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import dateutil.parser
+from datetime import datetime
 
 def make_sure_dir_exists(path):
 	try:
@@ -23,3 +25,7 @@ def make_sure_dir_exists(path):
 	except OSError as exception:
 		if exception.errno != errno.EEXIST:
 			raise
+
+def getSecondsUntilRelativeTime(timeStr):
+	t = dateutil.parser.parse(timeStr)
+	return (t - datetime.now()).total_seconds()

@@ -18,6 +18,7 @@
 from link import *
 from group import *
 from job import *
+from util import getSecondsUntilRelativeTime
 
 import sys
 import argparse
@@ -30,6 +31,7 @@ import os
 import shelve
 import pyev
 import signal
+import dateutil.parser
 
 address = ('localhost', 19340)
 
@@ -68,7 +70,14 @@ def listGroups(args):
 			args.log(item.geturl())
 		args.log("")
 
-def addLink(args): pass
+def addLink(args):
+	try:
+		dateutil.parser.parse(args.time)
+	except Exception as e: # TODO use right exception for dateutil.parser
+		print("Error: invalid backup time string - {0}".format(e))
+		return
+	# XXX implement
+
 def remLink(args): pass
 def listLinks(args): pass
 
@@ -197,7 +206,7 @@ def main():
 		return
 	
 	daemon = yapdi.Daemon()
-	daemon.daemonize()
+	#daemon.daemonize() XXX debug
 	
 	global config
 	config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'), writeback=True)
@@ -211,7 +220,7 @@ def main():
 		conn = ln.accept()
 		job = Job(conn.recv(), conn)
 		if job.cmd is None or len(job.cmd) == 0:
-			# XXX best to remove this, replace with try catch
+			# XXX best to remove this, use try catch for processJob below instead
 			job.printToConn("Error: command is malformed")
 			conn.close()
 			return
@@ -232,6 +241,14 @@ def main():
 		config.close()
 		eventLoop.stop(pyev.EVBREAK_ALL)
 	watchers.extend([pyev.Signal(sig, eventLoop, shutdown) for sig in STOPSIGNALS])
+	
+	def backupLink(watcher, revents): pass # XXX implement
+	links = config['links']
+	for link in links:
+		if link.time == '': continue
+		# convert relative time string to an absolute value of the next backup
+		absoluteTime = util.getSecondsUntilRelativeTime(link.time)
+		watchers.append(pyev.Periodic(absoluteTime, 0.0, eventLoop, backupLink, link))
 	
 	for watcher in watchers: watcher.start()
 	del watchers

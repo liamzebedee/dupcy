@@ -17,22 +17,20 @@
 
 from time import time
 
-class Links(list):
+class Links(dict):
+	"""key: target group name
+	   value: corresponding Link """
+	
 	def backupSource(self, sourceGroupName):
 		# TODO
 		pass
-	
-	def getLinkForTargetGroup(self, targetGroup):
-		for link in self:
-			if link.targetGroup is targetGroup:
-				return link
-		return None
 
 class Link(object):
-	def __init__(self, sourceGroups, targetGroup):
+	def __init__(self, sourceGroups, targetGroup, time=''):
 		self.sourceGroups = sourceGroups
 		self.targetGroup = targetGroup
 		self.lastModified = time()
+		self.time = time
 	
 	def doneSomething(self):
 		"""Updates the lastModified attribute (should be called after something is done)"""
