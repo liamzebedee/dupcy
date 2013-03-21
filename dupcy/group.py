@@ -42,4 +42,4 @@ class Group(object):
 				self.items.append(url)
 	
 	def remove(self, url):
-		self.items.remove(url)
+		self.items.remove(urlparse(url))
