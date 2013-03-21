@@ -79,10 +79,10 @@ def restore(args): pass
 def importConfig(args): pass
 def exportConfig(args): pass
 
-def processJob(job):
+def processJob(job, eventLoop):
 	cmd = job.cmd
 	parser = argparse.ArgumentParser()
-	parser.set_defaults(log=job.printToConn)
+	parser.set_defaults(log=job.printToConn, eventLoop=eventLoop)
 	subparser = parser.add_subparsers()
 	
 	# dupcee group
@@ -211,13 +211,14 @@ def main():
 		conn = ln.accept()
 		job = Job(conn.recv(), conn)
 		if job.cmd is None or len(job.cmd) == 0:
+			# XXX best to remove this, replace with try catch
 			job.printToConn("Error: command is malformed")
 			conn.close()
 			return
 		config['jobs'].append(job.cmd)
 		config.sync()
 		try:
-			processJob(job)
+			processJob(job, eventLoop)
 		except Exception as e:
 			job.printToConn("Error: {0}".format(e))
 		config['jobs'].remove(job.cmd)
@@ -233,6 +234,7 @@ def main():
 	watchers.extend([pyev.Signal(sig, eventLoop, shutdown) for sig in STOPSIGNALS])
 	
 	for watcher in watchers: watcher.start()
+	del watchers
 	eventLoop.start()
 
 if __name__ == "__main__":
