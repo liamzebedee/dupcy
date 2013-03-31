@@ -23,11 +23,30 @@ from shutil import copy2
 from subprocess import call
 import os
 
+class NonExistentTargetException(Exception):
+	def __init__(self, value):
+		self.value = value
+
 class Links(dict):
 	"""key: target group name
 	   value: corresponding Link """
 	
-	def backupTarget(self): pass
+	def backupTarget(self, targetName, configLocation='', incremental=False):
+		"""Performs a backup of targetName, optionally copying over the
+		dupcy configuration as well as performing an incremental backup"""
+		targetURL = self[targetName].targetGroup.items[0]
+		
+		# Check if target exists
+		if targetURL.scheme == 'file':
+			if not os.path.exists(url.path):
+				raise NonExistentTargetException(targetName)
+		
+		self[targetName].backup(full)
+		
+		# Try to copy config
+		if config is not '':
+			if url.scheme == 'file':
+				copy2(config, url.path)
 	
 	def updateWatchers(self, eventLoop):
 		for link in self.values():
@@ -49,6 +68,9 @@ class Link(object):
 		d['watcher'] = None
 		return d
 	
+	def getTarget(self):
+		return self.targetGroup.items[0]
+	
 	def backup(self, incremental=False):
 		includes = []
 		for k, group in self.sourceGroups.items():
@@ -58,11 +80,11 @@ class Link(object):
 		os.environ['PASSPHRASE'] = getpwd()
 		cmdList = ["duplicity", 
 					"incremental" if incremental else "full",
-					"--name='{0}'".format(self.targetGroup.name)]+
-					includes + [
+					"--name='{0}'".format(self.targetGroup.name)].extend(
+					includes).extend([
 					"--exclude=**",
 					"/",
-					self.getTarget()]
+					self.getTarget().geturl()])
 		
 		print("> {0}".format(full))
 		call(command)
