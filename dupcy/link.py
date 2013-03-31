@@ -76,7 +76,7 @@ class Link(object):
 	def getTarget(self):
 		return self.targetGroup.items[0].geturl()
 	
-	def backup(self, full=False):
+	def backup(self, full=True):
 		# Ugly. XXX interact with API directly
 		includes = []
 		for k, group in self.sourceGroups.items():
