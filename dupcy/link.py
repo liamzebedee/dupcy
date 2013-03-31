@@ -15,7 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
 
+import dupcy
 from time import time
+from util import getSecondsUntilRelativeTime, getpwd
+
+import pyev
+from shutil import copy2
+from subprocess import call
+import os
 
 class Links(dict):
 	"""key: target group name
@@ -24,27 +31,58 @@ class Links(dict):
 	def backupSource(self, sourceGroupName):
 		# TODO
 		pass
+	
+	def backupTarget(self, targetName, config='', full=False):
+		url = self[targetName].targetGroup.items[0]
+		if url.scheme == 'file':
+			if not os.path.exists(url.path):
+				return False
+		
+		self[targetName].backup(full)
+		if config is not '':
+			if url.scheme == 'file':
+				copy2(config, url.path)
+	
+	def updateWatchers(self, eventLoop):
+		for link in self.values():
+			link.updateWatcher(eventLoop)
 
 class Link(object):
 	def __init__(self, sourceGroups, targetGroup, time=''):
+		"""sourceGroups: a dictionary of group name to group
+		targetGroup: a single group"""
 		self.sourceGroups = sourceGroups
 		self.targetGroup = targetGroup
-		self.lastModified = time()
 		self.time = time
+		self.watcher = None
+		self.doneSomething()
+	
+	def __getstate__(self):
+		d = dict(self.__dict__)
+		d['watcher'] = None
+		return d		
 	
 	def doneSomething(self):
 		"""Updates the lastModified attribute (should be called after something is done)"""
 		self.lastModified = time()
 	
-	def duplicity(self, cmds):
-		call(["duplicity", "--name='{0}'".format(self.targetGroup.name)] + cmds)
+	def duplicity(self, mode, cmds):
+		os.environ['PASSPHRASE'] = getpwd()
+		full = ["duplicity", mode, "--name='{0}'".format(self.targetGroup.name)] + cmds
+		print("> {0}".format(full))
+		call(full)
+		del os.environ['PASSPHRASE']
 	
-	def getTarget(self): return self.targetGroup.items[0].geturl()
+	def getTarget(self):
+		return self.targetGroup.items[0].geturl()
 	
-	def backup(self):
+	def backup(self, full=False):
 		# Ugly. XXX interact with API directly
-		includes = ['--include "{0}"'.format(source.path) for source in self.sourceGroups.items()]
-		self.duplicity(includes + ["--exclude /", "/", self.getTarget()])
+		includes = []
+		for k, group in self.sourceGroups.items():
+			for item in group.items:
+				includes.append('--include={0}'.format(item.path))
+		self.duplicity("full" if full else "incremental", includes + ["--exclude=**", "/", self.getTarget()])
 		self.doneSomething()
 	
 	def restore(self, path='/', _file='/', time=''):
@@ -56,8 +94,19 @@ class Link(object):
 		"""
 		options = []
 		if _file is not '/':
-			options.append('--file-to-restore "{0}"'.format(_file))
+			options.append('--file-to-restore="{0}"'.format(_file))
 		if time is not '':
-			options.append('--time "{0}'.format(time))
-		self.duplicity(['restore'] + options + [self.getTarget(), path])
+			options.append('--time="{0}'.format(time))
+		self.duplicity("restore", options + [self.getTarget(), path])
+		self.doneSomething()
+		
+	def updateWatcher(self, eventLoop):
+		if self.time == '': return
+		# convert relative time string to an absolute value of the next backup
+		absoluteTime = getSecondsUntilRelativeTime(self.time)
+		if self.watcher is not None: self.watcher.stop()
+		def backupWrapper(watcher, revents):
+			self.backup(True)
+		self.watcher = pyev.Periodic(eventLoop.now() + absoluteTime, 0.0, eventLoop, backupWrapper)
+		self.watcher.start()
 		self.doneSomething()

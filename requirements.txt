@@ -1,0 +1,2 @@
+duplicity
+git+git://github.com/kasun/YapDi

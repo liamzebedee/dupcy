@@ -11,6 +11,19 @@ Groups are a powerful abstraction when used correctly. For example, when I creat
 
 **Links** are very flexible, as they can be configured to backup at the same time every day. Groups can also utilise a pre-backup hook, which helps for when you need to export data (such as live databases). 
 
+## Examples
+> dupcy group add school --items file:///home/liamzebedee/Documents/School file:///var/www/
+
+> dupcy group add media --items file:///home/liamzebedee/Pictures file:///home/liamzebedee/Music
+
+> dupcy group add usb --items file:///media/liamzebedee/usb1
+
+> dupcy group add hdd --items file:///media/liamzebedee/hdd
+
+> dupcy link add school hdd --time "7pm"
+
+> dupcy link add media hdd
+
 ## Comparison
 To duplicity:
 * Every location is specified in URL form. e.g. file:///home/liamzebedee instead of /home/liamzebedee

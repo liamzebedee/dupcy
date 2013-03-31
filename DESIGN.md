@@ -1,6 +1,14 @@
 **dupcy** is both a daemon and a client to such daemon.
 
-The daemon is started by running "*dupcy start*". Upon startup, it performs the following:
+*dupcy*:
+* Try to run the daemon (see below).
+* If no arguments were specified, exit now.
+* Else, connect to and send the entire command to the daemon. Read the output and send it to stdout. When the socket closes, assume this means completion and exit.
+
+Upon daemon startup, it performs the following:
+* Try to listen on port 19374 - if we can't listen, assume this means the daemon is already running, and exit immediately. If we can listen, run an event loop in another thread.
+** The event loop 
+
 * Opens the unix domain socket for communication with the client. 
 * Find and loads the configuration file
 * Iterates through all the links.
@@ -8,4 +16,6 @@ The daemon is started by running "*dupcy start*". Upon startup, it performs the 
 ** Set backup timers for existing links with set backup times.
 * Start the main loop to process jobs.
 
-That is the basis of the daemon. The client interfaces with the daemon through the command line, sending commands via the unix domain socket, also starting the daemon if necessary. 
+Dupcy daemon runs an event loop, which runs the command and sends the output.
+
+The dupcy daemon event loop simply processes and executes jobs, which are commands that supply a file for logging. 
