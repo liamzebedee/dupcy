@@ -18,12 +18,7 @@
 from urlparse import urlparse
 import os
 
-class Groups(dict):
-	def items(self):
-		items = []
-		for sourceGroup in self.sourceGroups:
-			items.extend(sourceGroup.items)
-		return items
+class Groups(dict): pass
 
 class Group(object):
 	def __init__(self, name, items=[], preBackupJob=''):
