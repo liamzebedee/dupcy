@@ -16,6 +16,7 @@
 # along with Dupcy.  If not, see <http://www.gnu.org/licenses/>.
 
 from time import time
+from util import getpwd
 
 class Links(dict):
 	"""key: target group name
@@ -41,8 +42,28 @@ class Link(object):
 		d['watcher'] = None
 		return d
 	
-	def backup(): pass
-	def restore(): pass
+	def backup(self, incremental=False):
+		includes = []
+		for k, group in self.sourceGroups.items():
+			for item in group.items:
+				includes.append('--include={0}'.format(item.path))
+		
+		os.environ['PASSPHRASE'] = getpwd()
+		cmdList = ["duplicity", 
+					"incremental" if incremental else "full",
+					"--name='{0}'".format(self.targetGroup.name)]+
+					includes + [
+					"--exclude=**",
+					"/",
+					self.getTarget()]
+		
+		print("> {0}".format(full))
+		call(command)
+		
+		del os.environ['PASSPHRASE']
+		self.doneSomething()
+	
+	def restore(self): pass
 	
 	def doneSomething(self):
 		"""Updates the lastModified attribute (should be called after something is done)"""
