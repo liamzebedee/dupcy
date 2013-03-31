@@ -18,6 +18,7 @@
 import os
 import dateutil.parser
 from datetime import datetime
+from Tkinter import *
 
 def make_sure_dir_exists(path):
 	try:
@@ -29,3 +30,20 @@ def make_sure_dir_exists(path):
 def getSecondsUntilRelativeTime(timeStr):
 	t = dateutil.parser.parse(timeStr)
 	return (t - datetime.now()).total_seconds()
+	
+def getpwd():
+	password = {'p':''} # nonlocal substitute
+	root = Tk()
+	pwdbox = Entry(root, show = '*')
+	def setpwd():
+		 password['p'] = pwdbox.get()
+		 root.destroy()
+	def onpwdentry(evt): setpwd()
+	Label(root, text = 'Password').pack(side = 'top')
+
+	pwdbox.pack(side = 'top')
+	pwdbox.bind('<Return>', onpwdentry)
+	Button(root, command=setpwd, text = 'OK').pack(side = 'top')
+
+	root.mainloop()
+	return password['p']
