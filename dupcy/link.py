@@ -18,13 +18,20 @@
 from time import time
 from util import getpwd
 
+import pyev
+from shutil import copy2
+from subprocess import call
+import os
+
 class Links(dict):
 	"""key: target group name
 	   value: corresponding Link """
 	
-	def backupSource(self, sourceGroupName):
-		# TODO
-		pass
+	def backupTarget(self): pass
+	
+	def updateWatchers(self, eventLoop):
+		for link in self.values():
+			link.updateWatcher(eventLoop)
 
 class Link(object):
 	def __init__(self, sourceGroups, targetGroup, time=''):
@@ -64,6 +71,17 @@ class Link(object):
 		self.doneSomething()
 	
 	def restore(self): pass
+	
+	def updateWatcher(self, eventLoop):
+		if self.time == '': return
+		# convert relative time string to an absolute value of the next backup
+		absoluteTime = getSecondsUntilRelativeTime(self.time)
+		if self.watcher is not None: self.watcher.stop()
+		def backupWrapper(watcher, revents):
+			self.backup(True)
+		self.watcher = pyev.Periodic(eventLoop.now() + absoluteTime, 0.0, eventLoop, backupWrapper)
+		self.watcher.start()
+		self.doneSomething()
 	
 	def doneSomething(self):
 		"""Updates the lastModified attribute (should be called after something is done)"""
