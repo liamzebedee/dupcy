@@ -18,7 +18,6 @@
 from link import *
 from group import *
 from job import *
-from util import getSecondsUntilRelativeTime
 
 import sys
 import argparse
@@ -32,8 +31,10 @@ import shelve
 import pyev
 import signal
 import dateutil.parser
+import time
 
 address = ('localhost', 19340)
+configLocation = os.path.join(GLib.get_user_config_dir(), 'dupcy')
 
 def addGroup(args):
 	args.log('Processing group')
@@ -48,7 +49,7 @@ def addGroup(args):
 			group.add(item, addAnyways=args.force)
 	args.log('Saving configuration')
 	
-	config['groups'][group.name] = group
+	config['groups'][args.name] = group
 	config.sync()
 
 def remGroup(args):
@@ -71,27 +72,76 @@ def listGroups(args):
 		args.log("")
 
 def addLink(args):
-	try:
-		dateutil.parser.parse(args.time)
-	except Exception as e: # TODO use right exception for dateutil.parser
-		print("Error: invalid backup time string - {0}".format(e))
-		return
-	# XXX implement
+	if args.time is not None:
+		try:
+			dateutil.parser.parse(args.time)
+		except ValueError as e:
+			raise Exception("Error: invalid backup time string - {0}".format(e))
+	args.log('Processing link')
+	default = Link({}, config['groups'][args.targetGroup])
+	link = config['links'].get(args.targetGroup, default)
+	sourceGroup = config['groups'][args.sourceGroup]
+	if sourceGroup is None:
+		raise Exception('Source group {0} does not exist.'.format(args.sourceGroup))
+	link.sourceGroups[args.sourceGroup] = sourceGroup
+	if args.time is not None:
+		link.time = args.time
+		link.doneSomething()
+		args.log("Adding countdown timer for backup")
+		link.updateWatcher(eventLoop)
+	
+	args.log("Saving configuration")
+	config['links'][link.targetGroup.name] = link
+	config.sync()
 
-def remLink(args): pass
-def listLinks(args): pass
+def remLink(args):
+	link = config['links'].get(args.targetGroup)
+	if link is None: return
+	
+	if args.sourceGroup is not None:
+		del link.sourceGroups[args.sourceGroup]		
+	else:
+		if link.watcher is not None: link.watcher.stop()
+		del config['links'][args.targetGroup]
+	config.sync()
 
-def backupSource(args): pass
-def backupTarget(args): pass
+def listLinks(args):
+	links = config['links']
+	for name, link in links.iteritems():
+		args.log("= {0} =".format(name))
+		[args.log(k) for k, v in link.sourceGroups.items()]
+		args.log("")
+
+def backupSource(args):	pass
+
+def backupTarget(args):
+	if not config['links'].has_key(args.target):
+		raise Exception("Not backing up: no such target exists")
+	args.log("Backup in progress")
+	
+	config['links'].backupTarget(args.target, configLocation, args.incremental)
+	args.log("Backup complete")
+	config.sync()
+
 def backupAll(args): pass
-def restore(args): pass
+
+def restore(args):
+	# XXX HACK HACK HACK
+	args.log("This must be run as root to set the permissions correctly, waiting 3 seconds")
+	time.sleep(1)
+	fromTarget = config['links'][args.fromTarget]
+	if fromTarget is None: raise Exception("Cannot restore: target to restore from not found")
+	fromTarget.restore(args.source, args.specifically, args.to)
+	args.log("Restore complete")
+	config.sync()
+
 def importConfig(args): pass
 def exportConfig(args): pass
 
-def processJob(job, eventLoop):
+def processJob(job):
 	cmd = job.cmd
 	parser = argparse.ArgumentParser()
-	parser.set_defaults(log=job.printToConn, eventLoop=eventLoop)
+	parser.set_defaults(log=job.printToConn, job=job)
 	subparser = parser.add_subparsers()
 	
 	# dupcee group
@@ -121,11 +171,12 @@ def processJob(job, eventLoop):
 	pLinkX_add.add_argument('sourceGroup', type=str)
 	pLinkX_add.add_argument('targetGroup', type=str)
 	pLinkX_add.add_argument('--time', type=str)
+	# --no-encryption
 	pLinkX_add.set_defaults(func=addLink)
 	
 	pLinkX_rem = pLinkX.add_parser('remove')
-	pLinkX_rem.add_argument('sourceGroup', type=str)
 	pLinkX_rem.add_argument('targetGroup', type=str)
+	pLinkX_rem.add_argument('--sourceGroup', type=str)
 	pLinkX_rem.set_defaults(func=remLink)
 	
 	pLinkX_list = pLinkX.add_parser('list')
@@ -138,12 +189,12 @@ def processJob(job, eventLoop):
 	pBackupX_source = pBackupX.add_parser('source')
 	pBackupX_source.add_argument('source', type=str)
 	pBackupX_source.add_argument('--to', type=str)
-	pBackupX_source.add_argument('--full', action="store_true")
+	pBackupX_source.add_argument('--incremental', action="store_true")
 	pBackupX_source.set_defaults(func=backupSource)
 	
 	pBackupX_target = pBackupX.add_parser('target')
 	pBackupX_target.add_argument('target', type=str)
-	pBackupX_target.add_argument('--full', action="store_true")
+	pBackupX_target.add_argument('--incremental', action="store_true")
 	pBackupX_target.set_defaults(func=backupTarget)
 	
 	pBackupX_all = pBackupX.add_parser('all')
@@ -152,8 +203,9 @@ def processJob(job, eventLoop):
 	pRestore = subparser.add_parser('restore')
 	
 	pRestore.add_argument('source', type=str)
-	pRestore.add_argument('--time', type=str)
-	pRestore.add_argument('--from', type=str)
+	pRestore.add_argument('fromTarget', type=str)
+	pRestore.add_argument('--specifically', type=str)
+	pRestore.add_argument('--to', type=str)
 	pRestore.set_defaults(func=restore)
 	
 	# dupcee config
@@ -169,7 +221,11 @@ def processJob(job, eventLoop):
 	pConfig_export.set_defaults(func=exportConfig)
 	
 	# setup
-	args = parser.parse_args(cmd)
+	try:
+		args = parser.parse_args(cmd)
+	except:
+		job.printToConn("Error: Malformed command. See the README for a guide on commands.")
+		return
 	args.func(args)
 	job.printToConn("Finished.")
 
@@ -183,11 +239,20 @@ def client(cmd):
 		except EOFError:
 			return
 
+def loadConfig():
+	"""Loads the config, this can also be used for debugging"""
+	global config
+	config = shelve.open(configLocation, writeback=True)
+
+def getConfig():
+	global config
+	loadConfig()
+	return config
+
 def initDefaultConfigState():
 	defaults = {
 		'groups': Groups(),
 		'links': Links(),
-		'jobs': Jobs(),
 	}
 	for k, v in defaults.iteritems():
 		if k not in config or config[k] is None:
@@ -208,30 +273,21 @@ def main():
 	daemon = yapdi.Daemon()
 	#daemon.daemonize() XXX debug
 	
-	global config
-	config = shelve.open(os.path.join(GLib.get_user_config_dir(), 'dupcy'), writeback=True)
+	loadConfig()
 	initDefaultConfigState()
 	
 	# XXX consider increasing timeout interval to improve performance, events are rarely added 
+	global eventLoop
 	eventLoop = pyev.default_loop()
 	watchers = []
 	
 	def handle_new_client(watcher, revents):
 		conn = ln.accept()
 		job = Job(conn.recv(), conn)
-		if job.cmd is None or len(job.cmd) == 0:
-			# XXX best to remove this, use try catch for processJob below instead
-			job.printToConn("Error: command is malformed")
-			conn.close()
-			return
-		config['jobs'].append(job.cmd)
-		config.sync()
 		try:
-			processJob(job, eventLoop)
+			processJob(job)
 		except Exception as e:
-			job.printToConn("Error: {0}".format(e))
-		config['jobs'].remove(job.cmd)
-		config.sync()
+			job.printToConn("Error running job: {0}".format(e))
 		conn.close()
 	clientListener = pyev.Io(ln._listener._socket, pyev.EV_READ, eventLoop, handle_new_client)
 	watchers.append(clientListener)
@@ -242,13 +298,8 @@ def main():
 		eventLoop.stop(pyev.EVBREAK_ALL)
 	watchers.extend([pyev.Signal(sig, eventLoop, shutdown) for sig in STOPSIGNALS])
 	
-	def backupLink(watcher, revents): pass # XXX implement
-	links = config['links']
-	for link in links:
-		if link.time == '': continue
-		# convert relative time string to an absolute value of the next backup
-		absoluteTime = util.getSecondsUntilRelativeTime(link.time)
-		watchers.append(pyev.Periodic(absoluteTime, 0.0, eventLoop, backupLink, link))
+	config['links'].updateWatchers(eventLoop)
+	config.sync()
 	
 	for watcher in watchers: watcher.start()
 	del watchers

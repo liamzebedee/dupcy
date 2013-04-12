@@ -19,6 +19,7 @@ import os
 import dateutil.parser
 from datetime import datetime
 from Tkinter import *
+from subprocess import call
 
 def make_sure_dir_exists(path):
 	try:
@@ -47,3 +48,7 @@ def getpwd():
 
 	root.mainloop()
 	return password['p']
+
+def cmd(cmdList):
+	print("> {0}".format(cmdList))
+	call(cmdList)
